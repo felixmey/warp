@@ -35,6 +35,15 @@ Kernels and User Functions
   (e.g., ``wp.float64(wp.PI)`` or ``wp.int64(large_value)``).
 * Python ``IntFlag`` values behave like raw integers in Warp kernels: bitwise negation (``~``)
   produces the integer negation, not a masked combination of flags as in standard Python ``IntFlag`` behavior.
+* :ref:`Callable parameters <callable-parameters>` in user functions only support direct inline calls with
+  specialization-time targets: user-defined :func:`@wp.func <warp.func>` functions and simple built-in Warp functions
+  such as ``wp.sin``, ``wp.cos``, ``wp.sqrt``, ``wp.add``, and ``wp.min``.
+  Arbitrary Python callables and built-in Warp functions that require special code-generation behavior, dispatch logic,
+  or side effects, such as ``wp.printf``, are not supported.
+  Rebinding a function-valued local to a different function or to a non-function value is not supported.
+  User functions with ``Callable`` parameters also cannot define custom gradient or replay functions.
+  Callable argument and return types in annotations such as ``Callable[[float], float]`` are accepted but are not
+  validated against the target function signature.
 
 A limitation of Warp is that each dimension of the grid used to launch a kernel must be representable as a 32-bit
 signed integer. Therefore, no single dimension of a grid should exceed :math:`2^{31}-1`.
