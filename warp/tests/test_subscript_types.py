@@ -4,7 +4,7 @@
 """Tests for subscript-style type annotations on arrays and tiles, plus the internal Vector/Matrix/Quaternion/Transformation generics."""
 
 import unittest
-from typing import Any, Literal, TypeVar, get_origin
+from typing import Any, Literal, TypeVar, Union, get_origin
 
 import numpy as np
 
@@ -484,6 +484,46 @@ class TestSubscriptTypes(unittest.TestCase):
         vars1 = arr_ann.vars
         vars2 = arr_ann.vars
         self.assertIs(vars1, vars2)
+
+    def test_annotation_union_operator(self):
+        """Array annotations support runtime union expressions in both operand orders."""
+        arr_ann = wp.array[float]
+        ia_ann = wp.indexedarray[wp.float64]
+
+        u1 = arr_ann | float
+        self.assertIs(get_origin(u1), Union)
+        self.assertEqual(u1.__args__, (arr_ann, float))
+
+        u2 = float | arr_ann
+        self.assertIs(get_origin(u2), Union)
+        self.assertEqual(u2.__args__, (float, arr_ann))
+
+        u3 = arr_ann | None
+        self.assertIs(get_origin(u3), Union)
+        self.assertCountEqual(u3.__args__, (arr_ann, type(None)))
+
+        u4 = None | ia_ann
+        self.assertIs(get_origin(u4), Union)
+        self.assertCountEqual(u4.__args__, (ia_ann, type(None)))
+
+        # Chaining produces a regular Union annotation.
+        chained = arr_ann | float | ia_ann | float
+        self.assertIs(get_origin(chained), Union)
+        self.assertIn(arr_ann, chained.__args__)
+        self.assertIn(float, chained.__args__)
+        self.assertIn(ia_ann, chained.__args__)
+
+    def test_annotation_union_invalid_for_codegen(self):
+        """Union annotations are intentionally invalid in Warp codegen."""
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            r"Union type annotations are only supported at Python scope",
+        ):
+
+            @wp.func
+            def _invalid_union_arg(a: wp.array[float] | float) -> float:
+                return 0.0
 
     def test_annotation_helpers(self):
         """Test matches_array_class and concrete_array_type helpers."""
